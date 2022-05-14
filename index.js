@@ -5,6 +5,9 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 
 const port = process.env.PORT || 5000;
+//middleware
+app.use(cors());
+app.use(express.json());
 
 // mongoDB
 
@@ -28,6 +31,7 @@ const run = async () => {
       const services = await cursor.toArray();
       res.send(services);
     });
+
     // available service get data
     app.get("/available", async (req, res) => {
       const date = req.query.date;
@@ -55,7 +59,7 @@ const run = async () => {
       const query = {
         treatment: booking.treatment,
         date: booking.date,
-        patient: booking.patient,
+        email: booking.email,
       };
       const exists = await bookingCollection.findOne(query);
       if (exists) {
@@ -64,14 +68,17 @@ const run = async () => {
       const result = await bookingCollection.insertOne(booking);
       res.send({ success: true, booking: result });
     });
+    // booking get api create
+    app.get("/booking", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const bookings = await bookingCollection?.find(query).toArray();
+      res.send(bookings);
+    });
   } finally {
   }
 };
 run().catch(console.dir);
-
-//middleware
-app.use(cors());
-app.use(express.json());
 
 app.get("/", (req, res) => {
   res.send("connect");
