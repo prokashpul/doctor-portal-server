@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
 
@@ -17,6 +18,20 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers?.authorization;
+  if (!authorization) {
+    return res.status(401).send({ message: "Unauthorize Access" });
+  }
+  const token = authorization?.split(" ")[1];
+  jwt.verify(token, process.env.SECRET_KEY, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden Access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 const run = async () => {
   try {
@@ -70,11 +85,16 @@ const run = async () => {
       res.send({ success: true, booking: result });
     });
     // booking get api create
-    app.get("/booking", async (req, res) => {
+    app.get("/booking", verifyJWT, async (req, res) => {
       const email = req.query.email;
-      const query = { email: email };
-      const bookings = await bookingCollection?.find(query).toArray();
-      res.send(bookings);
+      const decodedEmail = req.decoded?.email;
+      if (decodedEmail === email) {
+        const query = { email: email };
+        const bookings = await bookingCollection?.find(query).toArray();
+        res.send(bookings);
+      } else {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
     });
     //user info update put api create
     app.put("/user/:email", async (req, res) => {
@@ -86,7 +106,16 @@ const run = async () => {
         $set: user,
       };
       const result = await userCollection.updateOne(filter, updateDoc, options);
-      res.send(result);
+      const token = jwt.sign(filter, process.env.SECRET_KEY, {
+        expiresIn: "1h",
+      });
+      res.send({ result, accessToken: token });
+    });
+    // user get api create
+    app.get("/users", async (req, res) => {
+      const query = {};
+      const users = await userCollection.find(query).toArray();
+      res.send(users);
     });
   } finally {
   }
