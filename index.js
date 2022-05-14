@@ -23,6 +23,7 @@ const run = async () => {
     await client.connect();
     const serviceCollection = client.db("doctor_portal").collection("services");
     const bookingCollection = client.db("booking").collection("booking");
+    const userCollection = client.db("doctor_portal").collection("user");
 
     // get service api
     app.get("/services", async (req, res) => {
@@ -74,6 +75,18 @@ const run = async () => {
       const query = { email: email };
       const bookings = await bookingCollection?.find(query).toArray();
       res.send(bookings);
+    });
+    //user info update put api create
+    app.put("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc, options);
+      res.send(result);
     });
   } finally {
   }
