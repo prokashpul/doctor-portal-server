@@ -97,6 +97,17 @@ const run = async () => {
       }
     });
     //user info update put api create
+    app.put("/admin/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updateDoc = {
+        $set: { role: "admin" },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+
+      res.send(result);
+    });
+    //user info update put api create
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
@@ -111,8 +122,9 @@ const run = async () => {
       });
       res.send({ result, accessToken: token });
     });
+
     // user get api create
-    app.get("/users", async (req, res) => {
+    app.get("/users", verifyJWT, async (req, res) => {
       const query = {};
       const users = await userCollection.find(query).toArray();
       res.send(users);
