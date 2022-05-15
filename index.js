@@ -96,16 +96,29 @@ const run = async () => {
         return res.status(403).send({ message: "Forbidden Access" });
       }
     });
-    //user info update put api create
-    app.put("/admin/user/:email", async (req, res) => {
+    // admin user api
+    app.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
-      const filter = { email: email };
-      const updateDoc = {
-        $set: { role: "admin" },
-      };
-      const result = await userCollection.updateOne(filter, updateDoc);
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === "admin";
+      res.send({ admin: isAdmin });
+    });
+    //user info update put api create
+    app.put("/admin/user/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const decodedEmail = req.decoded.email;
+      const required = await userCollection.findOne({ email: decodedEmail });
+      if (required.role === "admin") {
+        const filter = { email: email };
+        const updateDoc = {
+          $set: { role: "admin" },
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
 
-      res.send(result);
+        res.send(result);
+      } else {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
     });
     //user info update put api create
     app.put("/user/:email", async (req, res) => {
