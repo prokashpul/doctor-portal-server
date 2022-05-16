@@ -2,8 +2,8 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion } = require("mongodb");
-const { application } = require("express");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+// const { application } = require("express");
 const app = express();
 
 const port = process.env.PORT || 5000;
@@ -42,6 +42,15 @@ const run = async () => {
     const userCollection = client.db("doctor_portal").collection("user");
     const doctorCollection = client.db("doctor_portal").collection("doctors");
 
+    const adminVerify = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const required = await userCollection.findOne({ email: decodedEmail });
+      if (required.role === "admin") {
+        next();
+      } else {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+    };
     // get service api
     app.get("/services", async (req, res) => {
       const query = {};
@@ -107,21 +116,16 @@ const run = async () => {
       res.send({ admin: isAdmin });
     });
     //user info update put api create
-    app.put("/admin/user/:email", verifyJWT, async (req, res) => {
+    app.put("/admin/user/:email", verifyJWT, adminVerify, async (req, res) => {
       const email = req.params.email;
-      const decodedEmail = req.decoded.email;
-      const required = await userCollection.findOne({ email: decodedEmail });
-      if (required.role === "admin") {
-        const filter = { email: email };
-        const updateDoc = {
-          $set: { role: "admin" },
-        };
-        const result = await userCollection.updateOne(filter, updateDoc);
 
-        res.send(result);
-      } else {
-        return res.status(403).send({ message: "Forbidden access" });
-      }
+      const filter = { email: email };
+      const updateDoc = {
+        $set: { role: "admin" },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+
+      res.send(result);
     });
     //user info update put api create
     app.put("/user/:email", async (req, res) => {
@@ -146,9 +150,22 @@ const run = async () => {
       res.send(users);
     });
     //doctor data post api
-    app.post("/doctors", async (req, res) => {
+    app.post("/doctors", verifyJWT, adminVerify, async (req, res) => {
       const query = req.body;
       const result = await doctorCollection.insertOne(query);
+      res.send(result);
+    });
+    //doctor data post api
+    app.get("/doctors", verifyJWT, adminVerify, async (req, res) => {
+      const query = {};
+      const result = await doctorCollection.find({}).toArray();
+      res.send(result);
+    });
+    //doctor data post api
+    app.delete("/doctors/:id", verifyJWT, adminVerify, async (req, res) => {
+      const query = req.params.id;
+      const doctorId = { _id: ObjectId(query) };
+      const result = await doctorCollection.deleteOne(doctorId);
       res.send(result);
     });
   } finally {
