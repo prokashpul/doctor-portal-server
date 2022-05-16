@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const { application } = require("express");
 const app = express();
 
 const port = process.env.PORT || 5000;
@@ -39,11 +40,12 @@ const run = async () => {
     const serviceCollection = client.db("doctor_portal").collection("services");
     const bookingCollection = client.db("doctor_portal").collection("booking");
     const userCollection = client.db("doctor_portal").collection("user");
+    const doctorCollection = client.db("doctor_portal").collection("doctors");
 
     // get service api
     app.get("/services", async (req, res) => {
       const query = {};
-      const cursor = serviceCollection.find(query);
+      const cursor = serviceCollection.find(query).project({ name: 1 });
       const services = await cursor.toArray();
       res.send(services);
     });
@@ -142,6 +144,12 @@ const run = async () => {
       const query = {};
       const users = await userCollection.find(query).toArray();
       res.send(users);
+    });
+    //doctor data post api
+    app.post("/doctors", async (req, res) => {
+      const query = req.body;
+      const result = await doctorCollection.insertOne(query);
+      res.send(result);
     });
   } finally {
   }
