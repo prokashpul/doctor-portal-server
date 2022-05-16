@@ -37,7 +37,7 @@ const run = async () => {
   try {
     await client.connect();
     const serviceCollection = client.db("doctor_portal").collection("services");
-    const bookingCollection = client.db("booking").collection("booking");
+    const bookingCollection = client.db("doctor_portal").collection("booking");
     const userCollection = client.db("doctor_portal").collection("user");
 
     // get service api
@@ -79,10 +79,11 @@ const run = async () => {
       };
       const exists = await bookingCollection.findOne(query);
       if (exists) {
-        res.send({ success: false, booking: exists });
+        return res.send({ success: false, booking: exists });
+      } else {
+        const result = await bookingCollection.insertOne(booking);
+        return res.send({ success: true, result });
       }
-      const result = await bookingCollection.insertOne(booking);
-      res.send({ success: true, booking: result });
     });
     // booking get api create
     app.get("/booking", verifyJWT, async (req, res) => {
