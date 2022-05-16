@@ -73,13 +73,13 @@ const run = async () => {
     app.post("/booking", async (req, res) => {
       const booking = req.body;
       const query = {
-        treatment: booking.treatment,
-        date: booking.date,
-        email: booking.email,
+        treatment: booking?.treatment,
+        date: booking?.date,
+        email: booking?.email,
       };
       const exists = await bookingCollection.findOne(query);
       if (exists) {
-        return res.send({ success: false, booking: exists });
+        res.send({ success: false, booking: exists });
       }
       const result = await bookingCollection.insertOne(booking);
       res.send({ success: true, booking: result });
