@@ -59,9 +59,25 @@ const run = async () => {
       res.send(services);
     });
 
+    // booking post api create
+    app.post("/booking", async (req, res) => {
+      const booking = req.body;
+
+      const exists = await bookingCollection.findOne({
+        treatment: booking?.treatment,
+        date: booking?.date,
+        email: booking?.email,
+      });
+      if (exists) {
+        return res.send({ success: false, booking: exists });
+      } else {
+        const result = await bookingCollection.insertOne(booking);
+        return res.send({ success: true, result });
+      }
+    });
     // available service get data
     app.get("/available", async (req, res) => {
-      const date = req.query.date;
+      const date = req.query?.date;
       // step 1
       const services = await serviceCollection.find().toArray();
       // step 2
@@ -73,28 +89,12 @@ const run = async () => {
           (book) => book.treatment === service.name
         );
         const bookedSlot = serviceBookings?.map((book) => book.slot);
-        const availableSlot = service.slots.filter(
+        const availableSlot = service?.slots?.filter(
           (slot) => !bookedSlot.includes(slot)
         );
         service.slots = availableSlot;
       });
       res.send(services);
-    });
-    // booking post api create
-    app.post("/booking", async (req, res) => {
-      const booking = req.body;
-      const query = {
-        treatment: booking?.treatment,
-        date: booking?.date,
-        email: booking?.email,
-      };
-      const exists = await bookingCollection.findOne(query);
-      if (exists) {
-        return res.send({ success: false, booking: exists });
-      } else {
-        const result = await bookingCollection.insertOne(booking);
-        return res.send({ success: true, result });
-      }
     });
     // booking get api create
     app.get("/booking", verifyJWT, async (req, res) => {
@@ -103,11 +103,19 @@ const run = async () => {
       if (decodedEmail === email) {
         const query = { email: email };
         const bookings = await bookingCollection?.find(query).toArray();
-        res.send(bookings);
+        return res.send(bookings);
       } else {
         return res.status(403).send({ message: "Forbidden Access" });
       }
     });
+    // booking get api create
+    app.get("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const booking = await bookingCollection.findOne(query);
+      res.send(booking);
+    });
+
     // admin user api
     app.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
