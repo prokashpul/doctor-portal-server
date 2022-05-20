@@ -3,7 +3,8 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-// const { application } = require("express");
+// This is your test secret API key.
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 
 const port = process.env.PORT || 5000;
@@ -75,6 +76,18 @@ const run = async () => {
         return res.send({ success: true, result });
       }
     });
+    //post card ifo
+    app.post("/create-payment-intent", async (req, res) => {
+      const services = req.body;
+      const price = services.price || 200;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
     // available service get data
     app.get("/available", async (req, res) => {
       const date = req.query?.date;
@@ -109,7 +122,7 @@ const run = async () => {
       }
     });
     // booking get api create
-    app.get("/bookings/:id", async (req, res) => {
+    app.get("/bookings/:id", verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const booking = await bookingCollection.findOne(query);
