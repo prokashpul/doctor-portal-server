@@ -40,6 +40,7 @@ const run = async () => {
     await client.connect();
     const serviceCollection = client.db("doctor_portal").collection("services");
     const bookingCollection = client.db("doctor_portal").collection("booking");
+    const paymentCollection = client.db("doctor_portal").collection("payments");
     const userCollection = client.db("doctor_portal").collection("user");
     const doctorCollection = client.db("doctor_portal").collection("doctors");
 
@@ -77,9 +78,10 @@ const run = async () => {
       }
     });
     //post card ifo
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const services = req.body;
-      const price = services.price || 200;
+
+      const price = services.price;
       const amount = price * 100;
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
@@ -127,6 +129,21 @@ const run = async () => {
       const query = { _id: ObjectId(id) };
       const booking = await bookingCollection.findOne(query);
       res.send(booking);
+    });
+    // booking get api create
+    app.patch("/bookings/:id", verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const payment = req.body;
+      const filter = { _id: ObjectId(id) };
+      const updateDoc = {
+        $set: {
+          paid: true,
+          transitionId: payment.transitionId,
+        },
+      };
+      const booking = await bookingCollection.updateOne(filter, updateDoc);
+      const payments = await paymentCollection.insertOne(payment);
+      res.send(updateDoc);
     });
 
     // admin user api
